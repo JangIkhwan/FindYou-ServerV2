@@ -81,7 +81,7 @@ public class SyncJobBatch {
         this.startedAt = LocalDateTime.now();
     }
 
-    public static SyncJobBatch start(SyncJob syncJob, int batchNo, Integer requestPageNo, int requestedCount) {
+    public static SyncJobBatch of(SyncJob syncJob, int batchNo, Integer requestPageNo, int requestedCount) {
         return new SyncJobBatch(syncJob, batchNo, requestPageNo, requestedCount);
     }
 
