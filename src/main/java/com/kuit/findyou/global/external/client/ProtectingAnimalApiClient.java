@@ -4,6 +4,7 @@ import com.kuit.findyou.global.common.exception.CustomException;
 import com.kuit.findyou.global.external.constant.ExternalExceptionMessage;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalApiFullResponse;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalItemDTO;
+import com.kuit.findyou.global.external.dto.ProtectingAnimalPageResult;
 import com.kuit.findyou.global.external.exception.ProtectingAnimalApiClientException;
 import com.kuit.findyou.global.external.properties.ProtectingAnimalApiProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static com.kuit.findyou.global.common.response.status.BaseExceptionResponseStatus.HOME_STATISTICS_UPDATE_FAILED;
@@ -130,6 +132,44 @@ public class ProtectingAnimalApiClient {
             // 그 외 알 수 없는 예외
             log.error("[fetchRescuedAnimalCount] (bgnde={}, endde={}) 수치 집계 실패 ", bgnde, endde);
             throw new CustomException(HOME_STATISTICS_UPDATE_FAILED);
+        }
+    }
+
+    public ProtectingAnimalPageResult fetchPage(int pageNo) {
+        try {
+            ProtectingAnimalApiFullResponse response = fetchPageData(pageNo);
+
+            if (isEmptyResponse(response)) {
+                log.warn("[구조동물 공공데이터 응답 구조 이상] pageNo={}", pageNo);
+                throw new ProtectingAnimalApiClientException(PROTECTING_ANIMAL_API_CLIENT_EMPTY_RESPONSE);
+            }
+
+            ProtectingAnimalApiFullResponse.ProtectingAnimalBody body = response.response().body();
+            List<ProtectingAnimalItemDTO> items = body.items().item();
+
+            return new ProtectingAnimalPageResult(
+                    parseIntOrDefault(body.pageNo(), pageNo),
+                    parseIntOrDefault(body.numOfRows(), DEFAULT_PAGE_SIZE),
+                    parseIntOrDefault(body.totalCount(), 0),
+                    items == null ? Collections.emptyList() : items
+            );
+        } catch (ProtectingAnimalApiClientException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("[구조동물 공공데이터 페이지 {} 조회 실패]", pageNo, e);
+            throw new ProtectingAnimalApiClientException(PROTECTING_ANIMAL_API_CLIENT_CALL_FAILED, e);
+        }
+    }
+
+    private int parseIntOrDefault(String value, int defaultValue) {
+        if (value == null || value.isBlank()) {
+            return defaultValue;
+        }
+
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return defaultValue;
         }
     }
 
