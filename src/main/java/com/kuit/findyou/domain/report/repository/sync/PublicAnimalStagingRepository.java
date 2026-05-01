@@ -6,4 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface PublicAnimalStagingRepository extends JpaRepository<PublicAnimalStaging, Long> {
+
+    long countBySyncJobId(Long syncJobId);
 }

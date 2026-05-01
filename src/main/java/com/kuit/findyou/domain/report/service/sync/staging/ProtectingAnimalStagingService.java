@@ -6,6 +6,7 @@ import com.kuit.findyou.domain.report.model.sync.PublicAnimalStaging;
 import com.kuit.findyou.domain.report.model.sync.SyncJob;
 import com.kuit.findyou.domain.report.repository.sync.PublicAnimalStagingRepository;
 import com.kuit.findyou.domain.report.repository.sync.SyncJobRepository;
+import com.kuit.findyou.domain.report.service.sync.StagingValidationResult;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalItemDTO;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalPageResult;
 import com.kuit.findyou.global.external.util.ProtectingAnimalParser;
@@ -41,6 +42,24 @@ public class ProtectingAnimalStagingService {
         publicAnimalStagingRepository.flush();
 
         return stagingRows.size();
+    }
+
+    @Transactional(readOnly = true)
+    public StagingValidationResult validate(Long syncJobId, Integer expectedTotalCount) {
+        if (expectedTotalCount == null) {
+            return StagingValidationResult.failure("Expected total count is null. syncJobId=" + syncJobId);
+        }
+
+        long stagedCount = publicAnimalStagingRepository.countBySyncJobId(syncJobId);
+        if (stagedCount != expectedTotalCount) {
+            return StagingValidationResult.failure(
+                    "Staging count does not match expected total count. syncJobId=" + syncJobId
+                            + ", expectedTotalCount=" + expectedTotalCount
+                            + ", stagedCount=" + stagedCount
+            );
+        }
+
+        return StagingValidationResult.success();
     }
 
     private PublicAnimalStaging toStaging(SyncJob syncJob, int batchNo, ProtectingAnimalItemDTO item) {
