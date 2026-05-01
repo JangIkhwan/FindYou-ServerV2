@@ -6,7 +6,6 @@ import com.kuit.findyou.domain.report.model.sync.PublicAnimalStaging;
 import com.kuit.findyou.domain.report.model.sync.SyncJob;
 import com.kuit.findyou.domain.report.repository.sync.PublicAnimalStagingRepository;
 import com.kuit.findyou.domain.report.repository.sync.SyncJobRepository;
-import com.kuit.findyou.domain.report.service.sync.StagingValidationResult;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalItemDTO;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalPageResult;
 import com.kuit.findyou.global.external.util.ProtectingAnimalParser;

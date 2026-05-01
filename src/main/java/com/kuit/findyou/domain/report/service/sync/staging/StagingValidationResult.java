@@ -1,4 +1,4 @@
-package com.kuit.findyou.domain.report.service.sync;
+package com.kuit.findyou.domain.report.service.sync.staging;
 
 public record StagingValidationResult(
         boolean valid,

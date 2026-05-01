@@ -5,12 +5,12 @@ import com.kuit.findyou.domain.report.model.sync.SyncJobType;
 import com.kuit.findyou.domain.report.service.sync.job.SyncJobService;
 import com.kuit.findyou.domain.report.service.sync.merge.ProtectingReportMergeService;
 import com.kuit.findyou.domain.report.service.sync.staging.ProtectingAnimalStagingService;
+import com.kuit.findyou.domain.report.service.sync.staging.StagingValidationResult;
 import com.kuit.findyou.global.common.exception.CustomException;
 import com.kuit.findyou.global.external.client.ProtectingAnimalApiClient;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalPageResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import static com.kuit.findyou.global.common.response.status.BaseExceptionResponseStatus.PROTECTING_REPORT_SYNC_FAILED;
 
