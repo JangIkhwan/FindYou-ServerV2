@@ -1,6 +1,6 @@
 package com.kuit.findyou.domain.report.repository.sync;
 
-import com.kuit.findyou.domain.report.model.sync.PublicAnimalStaging;
+import com.kuit.findyou.domain.report.model.sync.PublicAnimalStagingRow;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -13,7 +13,7 @@ public class PublicAnimalStagingJdbcRepository {
 
     private final JdbcTemplate jdbcTemplate;
 
-    public int[][] upsertAll(List<PublicAnimalStaging> rows) {
+    public int[][] upsertAll(List<PublicAnimalStagingRow> rows) {
         String sql = """
             INSERT INTO public_animal_staging (
                 sync_job_id,
@@ -65,29 +65,29 @@ public class PublicAnimalStagingJdbcRepository {
             """;
 
         return jdbcTemplate.batchUpdate(sql, rows, 500, (ps, row) -> {
-            ps.setLong(1, row.getSyncJob().getId());
-            ps.setInt(2, row.getBatchNo());
-            ps.setString(3, row.getNoticeNumber());
-            ps.setString(4, row.getSpecies());
-            ps.setString(5, row.getBreed());
-            ps.setObject(6, row.getHappenDate());
-            ps.setString(7, row.getAddress());
-            ps.setString(8, row.getSex());
-            ps.setString(9, row.getNeutering());
-            ps.setObject(10, row.getAge());
-            ps.setObject(11, row.getWeight());
-            ps.setString(12, row.getFurColor());
-            ps.setString(13, row.getSignificant());
-            ps.setString(14, row.getFoundLocation());
-            ps.setObject(15, row.getNoticeStartDate());
-            ps.setObject(16, row.getNoticeEndDate());
-            ps.setString(17, row.getCareName());
-            ps.setString(18, row.getCareTel());
-            ps.setString(19, row.getAuthority());
-            ps.setString(20, row.getImageUrl1());
-            ps.setString(21, row.getImageUrl2());
-            ps.setString(22, row.getRawData());
-            ps.setString(23, row.getRawHash());
+            ps.setLong(1, row.syncJobId());
+            ps.setInt(2, row.batchNo());
+            ps.setString(3, row.noticeNumber());
+            ps.setString(4, row.species());
+            ps.setString(5, row.breed());
+            ps.setObject(6, row.happenDate());
+            ps.setString(7, row.address());
+            ps.setString(8, row.sex());
+            ps.setString(9, row.neutering());
+            ps.setObject(10, row.age());
+            ps.setObject(11, row.weight());
+            ps.setString(12, row.furColor());
+            ps.setString(13, row.significant());
+            ps.setString(14, row.foundLocation());
+            ps.setObject(15, row.noticeStartDate());
+            ps.setObject(16, row.noticeEndDate());
+            ps.setString(17, row.careName());
+            ps.setString(18, row.careTel());
+            ps.setString(19, row.authority());
+            ps.setString(20, row.imageUrl1());
+            ps.setString(21, row.imageUrl2());
+            ps.setString(22, row.rawData());
+            ps.setString(23, row.rawHash());
         });
     }
 
