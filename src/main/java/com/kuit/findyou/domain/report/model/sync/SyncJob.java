@@ -44,8 +44,8 @@ public class SyncJob {
     @Column(name = "total_merged_count", nullable = false)
     private int totalMergedCount;
 
-    @Column(name = "failed_batch_count", nullable = false)
-    private int failedBatchCount;
+    @Column(name = "failed_batch_no", nullable = false)
+    private int failedBatchNo;
 
     @Column(name = "started_at", nullable = false)
     private LocalDateTime startedAt;
@@ -82,8 +82,8 @@ public class SyncJob {
         this.totalStagedCount += stagedCount;
     }
 
-    public void addFailedBatchCount() {
-        this.failedBatchCount++;
+    public void setFailedBatchNo(int batchNo) {
+        this.failedBatchNo = batchNo;
     }
 
     public void markStagingCompleted() {
