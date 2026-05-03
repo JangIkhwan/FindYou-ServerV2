@@ -25,17 +25,16 @@ public class ProtectingAnimalStagingService {
     private static final String DEFAULT_SIGNIFICANT = "미등록";
 
     private final PublicAnimalStagingJdbcRepository publicAnimalStagingRepository;
+    private final ProtectingAnimalStagingWriter stagingWriter;
+    private final KakaoCoordinateClient kakaoCoordinateClient;
     private final ObjectMapper objectMapper;
 
-    @Transactional
     public int savePage(Long syncJobId, int batchNo, ProtectingAnimalPageResult pageResult) {
         List<PublicAnimalStagingRow> stagingRows = pageResult.items().stream()
                 .map(item -> toStaging(syncJobId, batchNo, item))
                 .toList();
 
-        publicAnimalStagingRepository.upsertAll(stagingRows);
-
-        return stagingRows.size();
+        return stagingWriter.saveRows(stagingRows);
     }
 
     @Transactional(readOnly = true)
@@ -51,6 +50,8 @@ public class ProtectingAnimalStagingService {
     }
 
     private PublicAnimalStagingRow toStaging(Long syncJobId, int batchNo, ProtectingAnimalItemDTO item) {
+        KakaoCoordinateClient.Coordinate coordinate = kakaoCoordinateClient.requestCoordinateOrDefault(item.careAddr());
+
         String rawData = toRawData(item);
 
         return PublicAnimalStagingRow.builder()
@@ -61,8 +62,8 @@ public class ProtectingAnimalStagingService {
                 .breed(ProtectingAnimalParser.trimOrNull(item.kindNm()))
                 .happenDate(ProtectingAnimalParser.parseDate(item.happenDt()))
                 .address(ProtectingAnimalParser.parseAddress(item.careAddr()))
-                .latitude(null)
-                .longitude(null)
+                .latitude(coordinate.latitude())
+                .longitude(coordinate.longitude())
                 .sex(ProtectingAnimalParser.parseSex(item.sexCd()).name())
                 .neutering(ProtectingAnimalParser.parseNeutering(item.neuterYn()).name())
                 .age(ProtectingAnimalParser.parseAge(item.age()))
