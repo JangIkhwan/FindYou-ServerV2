@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kuit.findyou.domain.report.model.sync.PublicAnimalStaging;
 import com.kuit.findyou.domain.report.model.sync.SyncJob;
-import com.kuit.findyou.domain.report.repository.sync.PublicAnimalStagingRepository;
+import com.kuit.findyou.domain.report.repository.sync.PublicAnimalStagingJdbcRepository;
 import com.kuit.findyou.domain.report.repository.sync.SyncJobRepository;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalItemDTO;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalPageResult;
@@ -25,7 +25,7 @@ public class ProtectingAnimalStagingService {
 
     private static final String DEFAULT_SIGNIFICANT = "미등록";
 
-    private final PublicAnimalStagingRepository publicAnimalStagingRepository;
+    private final PublicAnimalStagingJdbcRepository publicAnimalStagingRepository;
     private final SyncJobRepository syncJobRepository;
     private final ObjectMapper objectMapper;
 
@@ -37,24 +37,17 @@ public class ProtectingAnimalStagingService {
                 .map(item -> toStaging(syncJob, batchNo, item))
                 .toList();
 
-        publicAnimalStagingRepository.saveAll(stagingRows);
-        publicAnimalStagingRepository.flush();
+        publicAnimalStagingRepository.upsertAll(stagingRows);
 
         return stagingRows.size();
     }
 
     @Transactional(readOnly = true)
-    public StagingValidationResult validate(Long syncJobId, Integer expectedTotalCount) {
-        if (expectedTotalCount == null) {
-            return StagingValidationResult.failure("Expected total count is null. syncJobId=" + syncJobId);
-        }
-
+    public StagingValidationResult validate(Long syncJobId) {
         long stagedCount = publicAnimalStagingRepository.countBySyncJobId(syncJobId);
-        if (stagedCount != expectedTotalCount) {
+        if(stagedCount == 0){
             return StagingValidationResult.failure(
-                    "Staging count does not match expected total count. syncJobId=" + syncJobId
-                            + ", expectedTotalCount=" + expectedTotalCount
-                            + ", stagedCount=" + stagedCount
+                    "Staging is empty syncJobId=" + syncJobId
             );
         }
 
