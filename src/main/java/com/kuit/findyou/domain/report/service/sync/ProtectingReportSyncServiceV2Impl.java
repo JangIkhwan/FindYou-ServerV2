@@ -11,12 +11,13 @@ import com.kuit.findyou.global.external.client.ProtectingAnimalApiClient;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalPageResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 import static com.kuit.findyou.global.common.response.status.BaseExceptionResponseStatus.PROTECTING_REPORT_SYNC_FAILED;
 
 @Slf4j
 @RequiredArgsConstructor
-//@Service
+@Service
 public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncService{
 
     private final ProtectingAnimalApiClient protectingAnimalApiClient;
@@ -81,10 +82,10 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
 
             syncJobService.markMerging(job.getId());
 
+            // TODO : 원자적으로 수행되도록 트랜잭션 설정
             int mergedCount = mergeService.merge(job.getId());
-            syncJobService.markSuccess(job.getId(), mergedCount);
-
             mergeService.deleteStaging(job.getId());
+            syncJobService.markSuccess(job.getId(), mergedCount);
 
             long endMs = System.currentTimeMillis();
 

@@ -28,7 +28,7 @@ import static com.kuit.findyou.global.common.response.status.BaseExceptionRespon
 
 @Slf4j
 @RequiredArgsConstructor
-@Service
+//@Service
 public class ProtectingReportSyncServiceImpl implements ProtectingReportSyncService{
 
     private static final String DEFAULT_SIGNIFICANT = "미등록";
