@@ -66,7 +66,7 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
 
             syncJobService.markStagingCompleted(job.getId());
 
-            StagingValidationResult validation = stagingService.validate(job.getId(), totalExpectedCount);
+            StagingValidationResult validation = stagingService.validate(job.getId());
             if (!validation.valid()) {
                 syncJobService.markValidationFailed(job.getId(), validation.message());
                 return;
@@ -76,6 +76,8 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
 
             int mergedCount = mergeService.merge(job.getId());
             syncJobService.markSuccess(job.getId(), mergedCount);
+
+            mergeService.deleteStaging(job.getId());
 
         } catch (Exception e) {
             syncJobService.markFailed(job.getId(), e);
