@@ -5,6 +5,7 @@ import com.kuit.findyou.domain.report.model.sync.PublicAnimalStagingRow;
 import com.kuit.findyou.domain.report.model.sync.SyncJob;
 import com.kuit.findyou.domain.report.model.sync.SyncJobType;
 import com.kuit.findyou.domain.report.repository.sync.PublicAnimalStagingJdbcRepository;
+import com.kuit.findyou.global.external.client.KakaoCoordinateClient;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalItemDTO;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalPageResult;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,12 +28,20 @@ class ProtectingAnimalStagingServiceTest {
     @Mock
     PublicAnimalStagingJdbcRepository publicAnimalStagingRepository;
 
+    @Mock
+    ProtectingAnimalStagingWriter protectingAnimalStagingWriter;
+
+    @Mock
+    KakaoCoordinateClient kakaoCoordinateClient;
+
     ProtectingAnimalStagingService protectingAnimalStagingService;
 
     @BeforeEach
     void setUp() {
         protectingAnimalStagingService = new ProtectingAnimalStagingService(
                 publicAnimalStagingRepository,
+                protectingAnimalStagingWriter,
+                kakaoCoordinateClient,
                 new ObjectMapper()
         );
     }
