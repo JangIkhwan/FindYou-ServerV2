@@ -109,7 +109,7 @@ public class PublicAnimalStaging {
     @Column(name = "raw_data", columnDefinition = "JSON", nullable = false)
     private String rawData;
 
-    @Column(name = "raw_hash", length = 64, nullable = false)
+    @Column(name = "raw_hash", columnDefinition = "CHAR(64)", nullable = false)
     private String rawHash;
 
     @CreationTimestamp
