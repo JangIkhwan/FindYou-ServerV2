@@ -62,7 +62,7 @@ public class SyncJobService {
         SyncJobBatch batch = SyncJobBatch.of(syncJob, batchNo, requestPageNo, requestedCount);
         batch.markFailed(errorMessage);
 
-        syncJob.addFailedBatchCount();
+        syncJob.setFailedBatchNo(batchNo);
         syncJobBatchRepository.save(batch);
     }
 
