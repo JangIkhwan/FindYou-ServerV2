@@ -43,9 +43,9 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
                     pageResult = protectingAnimalApiClient.fetchPage(pageNo);
 
                     if (totalExpectedCount == null) {
-                        log.info("공공데이터 동기화 잡 {} : totalExpectedCount = {}", job.getId(), totalExpectedCount);
                         totalExpectedCount = pageResult.totalCount();
                         syncJobService.updateExpectedCount(job.getId(), totalExpectedCount);
+                        log.info("공공데이터 동기화 잡 {} : totalExpectedCount = {}", job.getId(), totalExpectedCount);
                     }
 
                     if (pageResult.items().isEmpty()) {
