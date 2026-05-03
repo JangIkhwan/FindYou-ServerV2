@@ -104,6 +104,24 @@ class ProtectingReportMergeServiceTest {
         assertThat(row.get("status")).isEqualTo("N");
         assertThat(row.get("notice_number")).isEqualTo("OLD-1");
     }
+    
+    @Test
+    @DisplayName("jobId에 해당하는 스테이징 데이터를 삭제한다")
+    void should_DeleteStagingSuccess(){
+        // given
+        long prevSyncJobId = insertSyncJob();
+        long prevStagingId = insertStaging(prevSyncJobId, "EXIST-1", "품종", "고양이", "주소", "특징");
+
+        long syncJobId = insertSyncJob();
+        long stagingId = insertStaging(syncJobId, "EXIST-1", "품종", "고양이", "주소", "특징");
+
+        // when
+        protectingReportMergeService.deleteStaging(syncJobId);
+        
+        // then
+        assertThat(existsProtectingReportStaging(prevStagingId)).isTrue();
+        assertThat(existsProtectingReportStaging(stagingId)).isFalse();
+    }
 
     private long insertSyncJob() {
         String sql = """
@@ -125,7 +143,7 @@ class ProtectingReportMergeServiceTest {
         return keyHolder.getKey().longValue();
     }
 
-    private void insertStaging(long syncJobId, String noticeNumber, String breed, String species, String address, String significant) {
+    private long insertStaging(long syncJobId, String noticeNumber, String breed, String species, String address, String significant) {
         String sql = """
                 INSERT INTO public_animal_staging (
                     sync_job_id,
@@ -157,8 +175,20 @@ class ProtectingReportMergeServiceTest {
                         '2026-05-01', '2026-05-10', '테스트보호소', '02-123-4567',
                         '테스트구청', '{}', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
                 """;
+        
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            ps.setLong(1, syncJobId);
+            ps.setString(2, noticeNumber);
+            ps.setString(3, species);
+            ps.setString(4, breed);
+            ps.setString(5, address);
+            ps.setString(6, significant);
+            return ps;
+        }, keyHolder);
 
-        jdbcTemplate.update(sql, syncJobId, noticeNumber, species, breed, address, significant);
+        return keyHolder.getKey().longValue();
     }
 
     private long insertExistingProtectingReport(String noticeNumber, String breed, String species,
@@ -251,5 +281,17 @@ class ProtectingReportMergeServiceTest {
                 """;
 
         return jdbcTemplate.queryForMap(sql, noticeNumber);
+    }
+
+    public boolean existsProtectingReportStaging(Long id) {
+        String sql = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM public_animal_staging
+                WHERE id = ?
+            )
+        """;
+
+        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, Boolean.class, id));
     }
 }
