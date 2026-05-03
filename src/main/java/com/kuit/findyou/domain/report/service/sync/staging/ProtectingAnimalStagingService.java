@@ -2,10 +2,9 @@ package com.kuit.findyou.domain.report.service.sync.staging;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kuit.findyou.domain.report.model.sync.PublicAnimalStaging;
-import com.kuit.findyou.domain.report.model.sync.SyncJob;
+import com.kuit.findyou.domain.report.model.sync.PublicAnimalStagingRow;
 import com.kuit.findyou.domain.report.repository.sync.PublicAnimalStagingJdbcRepository;
-import com.kuit.findyou.domain.report.repository.sync.SyncJobRepository;
+import com.kuit.findyou.global.external.client.KakaoCoordinateClient;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalItemDTO;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalPageResult;
 import com.kuit.findyou.global.external.util.ProtectingAnimalParser;
@@ -26,15 +25,12 @@ public class ProtectingAnimalStagingService {
     private static final String DEFAULT_SIGNIFICANT = "미등록";
 
     private final PublicAnimalStagingJdbcRepository publicAnimalStagingRepository;
-    private final SyncJobRepository syncJobRepository;
     private final ObjectMapper objectMapper;
 
     @Transactional
     public int savePage(Long syncJobId, int batchNo, ProtectingAnimalPageResult pageResult) {
-        SyncJob syncJob = syncJobRepository.getReferenceById(syncJobId);
-
-        List<PublicAnimalStaging> stagingRows = pageResult.items().stream()
-                .map(item -> toStaging(syncJob, batchNo, item))
+        List<PublicAnimalStagingRow> stagingRows = pageResult.items().stream()
+                .map(item -> toStaging(syncJobId, batchNo, item))
                 .toList();
 
         publicAnimalStagingRepository.upsertAll(stagingRows);
@@ -54,11 +50,11 @@ public class ProtectingAnimalStagingService {
         return StagingValidationResult.success();
     }
 
-    private PublicAnimalStaging toStaging(SyncJob syncJob, int batchNo, ProtectingAnimalItemDTO item) {
+    private PublicAnimalStagingRow toStaging(Long syncJobId, int batchNo, ProtectingAnimalItemDTO item) {
         String rawData = toRawData(item);
 
-        return PublicAnimalStaging.builder()
-                .syncJob(syncJob)
+        return PublicAnimalStagingRow.builder()
+                .syncJobId(syncJobId)
                 .batchNo(batchNo)
                 .noticeNumber(requiredNoticeNumber(item.noticeNo()))
                 .species(ProtectingAnimalParser.parseSpecies(item.upKindNm()))
