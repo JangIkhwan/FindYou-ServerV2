@@ -26,7 +26,11 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
 
     @Override
     public void syncProtectingReports() {
+        long startMs = System.currentTimeMillis();
+
         SyncJob job = syncJobService.startJob(SyncJobType.PROTECTING_REPORT_SYNC);
+
+        log.info("공공데이터 동기화 잡 {} : 시작", job.getId());
 
         try {
             int pageNo = 1;
@@ -39,6 +43,7 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
                     pageResult = protectingAnimalApiClient.fetchPage(pageNo);
 
                     if (totalExpectedCount == null) {
+                        log.info("공공데이터 동기화 잡 {} : totalExpectedCount = {}", job.getId(), totalExpectedCount);
                         totalExpectedCount = pageResult.totalCount();
                         syncJobService.updateExpectedCount(job.getId(), totalExpectedCount);
                     }
@@ -53,6 +58,7 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
                     pageNo++;
                 }
                 catch (Exception e){
+                    log.error("공공데이터 동기화 잡 {} : pageNo = {} 에서 에러 발생, 에러 사유 = {}", job.getId(), pageNo, e.getMessage());
                     syncJobService.recordBatchFailure(
                             job.getId(),
                             pageNo,
@@ -68,6 +74,7 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
 
             StagingValidationResult validation = stagingService.validate(job.getId());
             if (!validation.valid()) {
+                log.warn("공공데이터 동기화 잡 {} : 스테이징 데이터 검증 실패 {} ", job.getId(), validation.message());
                 syncJobService.markValidationFailed(job.getId(), validation.message());
                 return;
             }
@@ -79,7 +86,13 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
 
             mergeService.deleteStaging(job.getId());
 
+            long endMs = System.currentTimeMillis();
+
+            log.info("공공데이터 동기화 잡 {} : 성공. 소요 시간 = {} ms", job.getId(), endMs - startMs);
+
         } catch (Exception e) {
+            log.error("공공데이터 동기화 잡 {} : 실패 사유 = {}", job.getId(), e.getMessage());
+
             syncJobService.markFailed(job.getId(), e);
             throw new CustomException(PROTECTING_REPORT_SYNC_FAILED);
         }
