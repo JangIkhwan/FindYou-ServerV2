@@ -241,6 +241,14 @@ public class ProtectingReportMergeService {
         );
     }
 
+    public void deleteStaging(Long syncJobId) {
+        String sql = """
+                  DELETE FROM public_animal_staging WHERE sync_job_id = ?
+                """;
+
+        jdbcTemplate.update(sql, syncJobId);
+    }
+
     private record StagingRow(
             String noticeNumber,
             String species,
