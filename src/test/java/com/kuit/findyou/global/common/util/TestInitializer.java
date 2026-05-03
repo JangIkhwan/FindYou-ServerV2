@@ -29,6 +29,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.IntStream;
 
 @Component
@@ -52,6 +54,7 @@ public class TestInitializer {
     private final EntityManager em;
 
     private User defaultUser;
+    private final AtomicLong noticeSequence = new AtomicLong();
 
     @Transactional
     public User userWith3InterestReportsAnd2ViewedReports() {
@@ -89,7 +92,7 @@ public class TestInitializer {
                 Sex.M, "2", "5",
                 "갈색", Neutering.Y,
                 "절뚝거림", "홍대",
-                "NOTICE123", LocalDate.now(),
+                uniqueNoticeNumber("NOTICE123"), LocalDate.now(),
                 LocalDate.now().plusDays(10), "광진보호소",
                 "02", "관청",
                 BigDecimal.valueOf(37.0), BigDecimal.valueOf(127.0)
@@ -282,7 +285,7 @@ public class TestInitializer {
                 Neutering.Y,
                 "왼쪽 귀에 상처",
                 "마포대교 근처",
-                "NOTICE-2024-001",
+                uniqueNoticeNumber("NOTICE-2024-001"),
                 LocalDate.now(),
                 LocalDate.now().plusDays(14),
                 "마포구 동물보호센터",
@@ -350,7 +353,7 @@ public class TestInitializer {
                     Neutering.Y,
                     "왼쪽 귀에 상처",
                     "마포대교 근처",
-                    "NOTICE-2024-001",
+                    uniqueNoticeNumber("NOTICE-2024-001"),
                     LocalDate.now(),
                     LocalDate.now().plusDays(14),
                     "마포구 동물보호센터",
@@ -363,6 +366,15 @@ public class TestInitializer {
             return protectingReport;
         }
         return null;
+    }
+
+    private String uniqueNoticeNumber(String baseNoticeNumber) {
+        if (protectingReportRepository.findByNoticeNumberIn(Set.of(baseNoticeNumber)).isEmpty()) {
+            return baseNoticeNumber;
+        }
+        String suffix = "-" + noticeSequence.incrementAndGet();
+        int maxBaseLength = 30 - suffix.length();
+        return baseNoticeNumber.substring(0, Math.min(baseNoticeNumber.length(), maxBaseLength)) + suffix;
     }
 
     public User userWith3Reports() {
