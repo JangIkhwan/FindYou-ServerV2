@@ -1,11 +1,10 @@
 package com.kuit.findyou.domain.report.service.sync.staging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kuit.findyou.domain.report.model.sync.PublicAnimalStaging;
+import com.kuit.findyou.domain.report.model.sync.PublicAnimalStagingRow;
 import com.kuit.findyou.domain.report.model.sync.SyncJob;
 import com.kuit.findyou.domain.report.model.sync.SyncJobType;
 import com.kuit.findyou.domain.report.repository.sync.PublicAnimalStagingJdbcRepository;
-import com.kuit.findyou.domain.report.repository.sync.SyncJobRepository;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalItemDTO;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalPageResult;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,16 +27,12 @@ class ProtectingAnimalStagingServiceTest {
     @Mock
     PublicAnimalStagingJdbcRepository publicAnimalStagingRepository;
 
-    @Mock
-    SyncJobRepository syncJobRepository;
-
     ProtectingAnimalStagingService protectingAnimalStagingService;
 
     @BeforeEach
     void setUp() {
         protectingAnimalStagingService = new ProtectingAnimalStagingService(
                 publicAnimalStagingRepository,
-                syncJobRepository,
                 new ObjectMapper()
         );
     }
@@ -57,44 +52,42 @@ class ProtectingAnimalStagingServiceTest {
                 List.of(item)
         );
 
-        when(syncJobRepository.getReferenceById(syncJobId)).thenReturn(syncJob);
-
         // when
         int savedCount = protectingAnimalStagingService.savePage(syncJobId, batchNo, pageResult);
 
         // then
         assertThat(savedCount).isEqualTo(1);
 
-        ArgumentCaptor<List<PublicAnimalStaging>> captor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<PublicAnimalStagingRow>> captor = ArgumentCaptor.forClass(List.class);
         verify(publicAnimalStagingRepository).upsertAll(captor.capture());
 
-        List<PublicAnimalStaging> savedRows = captor.getValue();
+        List<PublicAnimalStagingRow> savedRows = captor.getValue();
         assertThat(savedRows).hasSize(1);
 
-        PublicAnimalStaging saved = savedRows.get(0);
-        assertThat(saved.getSyncJob()).isSameAs(syncJob);
-        assertThat(saved.getBatchNo()).isEqualTo(batchNo);
-        assertThat(saved.getNoticeNumber()).isEqualTo("NOTICE-1");
-        assertThat(saved.getSpecies()).isEqualTo("강아지");
-        assertThat(saved.getBreed()).isEqualTo("진돗개");
-        assertThat(saved.getHappenDate()).hasToString("2026-05-01");
-        assertThat(saved.getAddress()).isEqualTo("서울시 강남구");
-        assertThat(saved.getSex()).isEqualTo("M");
-        assertThat(saved.getNeutering()).isEqualTo("Y");
-        assertThat(saved.getAge()).isEqualTo("6");
-        assertThat(saved.getWeight()).isEqualTo("5.2");
-        assertThat(saved.getFurColor()).isEqualTo("갈색,흰색");
-        assertThat(saved.getSignificant()).isEqualTo("순함");
-        assertThat(saved.getFoundLocation()).isEqualTo("강남역");
-        assertThat(saved.getNoticeStartDate()).hasToString("2026-05-01");
-        assertThat(saved.getNoticeEndDate()).hasToString("2026-05-10");
-        assertThat(saved.getCareName()).isEqualTo("강남보호소");
-        assertThat(saved.getCareTel()).isEqualTo("02-123-4567");
-        assertThat(saved.getAuthority()).isEqualTo("강남구청");
-        assertThat(saved.getImageUrl1()).isEqualTo("https://example.com/1.jpg");
-        assertThat(saved.getImageUrl2()).isEqualTo("https://example.com/2.jpg");
-        assertThat(saved.getRawData()).contains("\"noticeNo\":\" NOTICE-1 \"");
-        assertThat(saved.getRawHash()).hasSize(64);
+        PublicAnimalStagingRow saved = savedRows.get(0);
+        assertThat(saved.syncJobId()).isSameAs(syncJobId);
+        assertThat(saved.batchNo()).isEqualTo(batchNo);
+        assertThat(saved.noticeNumber()).isEqualTo("NOTICE-1");
+        assertThat(saved.species()).isEqualTo("강아지");
+        assertThat(saved.breed()).isEqualTo("진돗개");
+        assertThat(saved.happenDate()).hasToString("2026-05-01");
+        assertThat(saved.address()).isEqualTo("서울시 강남구");
+        assertThat(saved.sex()).isEqualTo("M");
+        assertThat(saved.neutering()).isEqualTo("Y");
+        assertThat(saved.age()).isEqualTo("6");
+        assertThat(saved.weight()).isEqualTo("5.2");
+        assertThat(saved.furColor()).isEqualTo("갈색,흰색");
+        assertThat(saved.significant()).isEqualTo("순함");
+        assertThat(saved.foundLocation()).isEqualTo("강남역");
+        assertThat(saved.noticeStartDate()).hasToString("2026-05-01");
+        assertThat(saved.noticeEndDate()).hasToString("2026-05-10");
+        assertThat(saved.careName()).isEqualTo("강남보호소");
+        assertThat(saved.careTel()).isEqualTo("02-123-4567");
+        assertThat(saved.authority()).isEqualTo("강남구청");
+        assertThat(saved.imageUrl1()).isEqualTo("https://example.com/1.jpg");
+        assertThat(saved.imageUrl2()).isEqualTo("https://example.com/2.jpg");
+        assertThat(saved.rawData()).contains("\"noticeNo\":\" NOTICE-1 \"");
+        assertThat(saved.rawHash()).hasSize(64);
     }
 
     private ProtectingAnimalItemDTO protectingAnimalItem(String noticeNo) {
