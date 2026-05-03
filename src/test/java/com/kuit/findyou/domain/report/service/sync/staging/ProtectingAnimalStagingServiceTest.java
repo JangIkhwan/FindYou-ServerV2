@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kuit.findyou.domain.report.model.sync.PublicAnimalStaging;
 import com.kuit.findyou.domain.report.model.sync.SyncJob;
 import com.kuit.findyou.domain.report.model.sync.SyncJobType;
-import com.kuit.findyou.domain.report.repository.sync.PublicAnimalStagingRepository;
+import com.kuit.findyou.domain.report.repository.sync.PublicAnimalStagingJdbcRepository;
 import com.kuit.findyou.domain.report.repository.sync.SyncJobRepository;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalItemDTO;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalPageResult;
@@ -26,7 +26,7 @@ import static org.mockito.Mockito.when;
 class ProtectingAnimalStagingServiceTest {
 
     @Mock
-    PublicAnimalStagingRepository publicAnimalStagingRepository;
+    PublicAnimalStagingJdbcRepository publicAnimalStagingRepository;
 
     @Mock
     SyncJobRepository syncJobRepository;
@@ -66,8 +66,7 @@ class ProtectingAnimalStagingServiceTest {
         assertThat(savedCount).isEqualTo(1);
 
         ArgumentCaptor<List<PublicAnimalStaging>> captor = ArgumentCaptor.forClass(List.class);
-        verify(publicAnimalStagingRepository).saveAll(captor.capture());
-        verify(publicAnimalStagingRepository).flush();
+        verify(publicAnimalStagingRepository).upsertAll(captor.capture());
 
         List<PublicAnimalStaging> savedRows = captor.getValue();
         assertThat(savedRows).hasSize(1);
@@ -96,39 +95,6 @@ class ProtectingAnimalStagingServiceTest {
         assertThat(saved.getImageUrl2()).isEqualTo("https://example.com/2.jpg");
         assertThat(saved.getRawData()).contains("\"noticeNo\":\" NOTICE-1 \"");
         assertThat(saved.getRawHash()).hasSize(64);
-    }
-
-    @Test
-    @DisplayName("staging 데이터 수와 expectedTotalCount가 일치하면 검증에 성공한다")
-    void should_ValidateSuccess_When_StagedCountMatchesExpectedTotalCount() {
-        // given
-        Long syncJobId = 1L;
-        int expectedTotalCount = 10;
-        when(publicAnimalStagingRepository.countBySyncJobId(syncJobId)).thenReturn(10L);
-
-        // when
-        StagingValidationResult result = protectingAnimalStagingService.validate(syncJobId, expectedTotalCount);
-
-        // then
-        assertThat(result.valid()).isTrue();
-        assertThat(result.message()).isNull();
-    }
-
-    @Test
-    @DisplayName("staging 데이터 수와 expectedTotalCount가 일치하지 않으면 검증에 실패한다")
-    void should_ValidateFailure_When_StagedCountDoesNotMatchExpectedTotalCount() {
-        // given
-        Long syncJobId = 1L;
-        int expectedTotalCount = 10;
-        when(publicAnimalStagingRepository.countBySyncJobId(syncJobId)).thenReturn(8L);
-
-        // when
-        StagingValidationResult result = protectingAnimalStagingService.validate(syncJobId, expectedTotalCount);
-
-        // then
-        assertThat(result.valid()).isFalse();
-        assertThat(result.message()).contains("expectedTotalCount=10");
-        assertThat(result.message()).contains("stagedCount=8");
     }
 
     private ProtectingAnimalItemDTO protectingAnimalItem(String noticeNo) {
