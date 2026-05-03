@@ -23,6 +23,8 @@ public class PublicAnimalStagingJdbcRepository {
                 breed,
                 happen_date,
                 address,
+                latitude,
+                longitude,
                 sex,
                 neutering,
                 age,
@@ -39,13 +41,15 @@ public class PublicAnimalStagingJdbcRepository {
                 image_url2,
                 raw_data,
                 raw_hash
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 batch_no = VALUES(batch_no),
                 species = VALUES(species),
                 breed = VALUES(breed),
                 happen_date = VALUES(happen_date),
                 address = VALUES(address),
+                latitude = VALUES(latitude),
+                longitude = VALUES(longitude),
                 sex = VALUES(sex),
                 neutering = VALUES(neutering),
                 age = VALUES(age),
@@ -72,22 +76,24 @@ public class PublicAnimalStagingJdbcRepository {
             ps.setString(5, row.breed());
             ps.setObject(6, row.happenDate());
             ps.setString(7, row.address());
-            ps.setString(8, row.sex());
-            ps.setString(9, row.neutering());
-            ps.setObject(10, row.age());
-            ps.setObject(11, row.weight());
-            ps.setString(12, row.furColor());
-            ps.setString(13, row.significant());
-            ps.setString(14, row.foundLocation());
-            ps.setObject(15, row.noticeStartDate());
-            ps.setObject(16, row.noticeEndDate());
-            ps.setString(17, row.careName());
-            ps.setString(18, row.careTel());
-            ps.setString(19, row.authority());
-            ps.setString(20, row.imageUrl1());
-            ps.setString(21, row.imageUrl2());
-            ps.setString(22, row.rawData());
-            ps.setString(23, row.rawHash());
+            ps.setObject(8, row.latitude());
+            ps.setObject(9, row.longitude());
+            ps.setString(10, row.sex());
+            ps.setString(11, row.neutering());
+            ps.setString(12, row.age());
+            ps.setString(13, row.weight());
+            ps.setString(14, row.furColor());
+            ps.setString(15, row.significant());
+            ps.setString(16, row.foundLocation());
+            ps.setObject(17, row.noticeStartDate());
+            ps.setObject(18, row.noticeEndDate());
+            ps.setString(19, row.careName());
+            ps.setString(20, row.careTel());
+            ps.setString(21, row.authority());
+            ps.setString(22, row.imageUrl1());
+            ps.setString(23, row.imageUrl2());
+            ps.setString(24, row.rawData());
+            ps.setString(25, row.rawHash());
         });
     }
 
