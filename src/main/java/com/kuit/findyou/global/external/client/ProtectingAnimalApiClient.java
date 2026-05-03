@@ -136,29 +136,21 @@ public class ProtectingAnimalApiClient {
     }
 
     public ProtectingAnimalPageResult fetchPage(int pageNo) {
-        try {
-            ProtectingAnimalApiFullResponse response = fetchPageData(pageNo);
+        ProtectingAnimalApiFullResponse response = fetchPageData(pageNo);
 
-            if (isEmptyResponse(response)) {
-                log.warn("[구조동물 공공데이터 응답 구조 이상] pageNo={}", pageNo);
-                throw new ProtectingAnimalApiClientException(PROTECTING_ANIMAL_API_CLIENT_EMPTY_RESPONSE);
-            }
-
-            ProtectingAnimalApiFullResponse.ProtectingAnimalBody body = response.response().body();
-            List<ProtectingAnimalItemDTO> items = body.items().item();
-
-            return new ProtectingAnimalPageResult(
-                    parseIntOrDefault(body.pageNo(), pageNo),
-                    parseIntOrDefault(body.numOfRows(), DEFAULT_PAGE_SIZE),
-                    parseIntOrDefault(body.totalCount(), 0),
-                    items == null ? Collections.emptyList() : items
-            );
-        } catch (ProtectingAnimalApiClientException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("[구조동물 공공데이터 페이지 {} 조회 실패]", pageNo, e);
-            throw new ProtectingAnimalApiClientException(PROTECTING_ANIMAL_API_CLIENT_CALL_FAILED, e);
+        if (isEmptyResponse(response)) {
+            throw new ProtectingAnimalApiClientException(PROTECTING_ANIMAL_API_CLIENT_EMPTY_RESPONSE);
         }
+
+        ProtectingAnimalApiFullResponse.ProtectingAnimalBody body = response.response().body();
+        List<ProtectingAnimalItemDTO> items = body.items().item();
+
+        return new ProtectingAnimalPageResult(
+                parseIntOrDefault(body.pageNo(), pageNo),
+                parseIntOrDefault(body.numOfRows(), DEFAULT_PAGE_SIZE),
+                parseIntOrDefault(body.totalCount(), 0),
+                items == null ? Collections.emptyList() : items
+        );
     }
 
     private int parseIntOrDefault(String value, int defaultValue) {
