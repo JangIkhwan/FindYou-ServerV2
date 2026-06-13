@@ -32,6 +32,12 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
   flyway:
     enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus,metrics,health,info
 ---
 # 개발용 DB
 spring:
