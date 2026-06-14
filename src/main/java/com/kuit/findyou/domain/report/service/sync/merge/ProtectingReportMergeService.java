@@ -19,6 +19,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProtectingReportMergeService {
 
+    private static final int INSERT_CHUNK_SIZE = 500;
+
     private final JdbcTemplate jdbcTemplate;
 
     @Transactional
@@ -83,17 +85,28 @@ public class ProtectingReportMergeService {
     }
 
     private int insertNewReports(Long syncJobId) {
-        List<StagingRow> rows = findNewStagingRows(syncJobId);
+        int insertedCount = 0;
+        String lastNoticeNumber = null;
 
-        for (StagingRow row : rows) {
-            long reportId = insertReport(row);
-            insertProtectingReport(reportId, row);
+        while (true) {
+            List<StagingRow> rows = findNewStagingRows(syncJobId, lastNoticeNumber, INSERT_CHUNK_SIZE);
+            if (rows.isEmpty()) {
+                break;
+            }
+
+            for (StagingRow row : rows) {
+                long reportId = insertReport(row);
+                insertProtectingReport(reportId, row);
+            }
+
+            insertedCount += rows.size();
+            lastNoticeNumber = rows.get(rows.size() - 1).noticeNumber();
         }
 
-        return rows.size();
+        return insertedCount;
     }
 
-    private List<StagingRow> findNewStagingRows(Long syncJobId) {
+    private List<StagingRow> findNewStagingRows(Long syncJobId, String lastNoticeNumber, int limit) {
         String sql = """
                 SELECT s.notice_number,
                        s.species,
@@ -118,8 +131,11 @@ public class ProtectingReportMergeService {
                 LEFT JOIN protecting_reports pr ON pr.notice_number = s.notice_number
                 WHERE s.sync_job_id = ?
                   AND pr.id IS NULL
+                  AND (? IS NULL OR s.notice_number > ?)
+                ORDER BY s.notice_number
+                LIMIT ?
                 """;
-        return jdbcTemplate.query(sql, stagingRowMapper(), syncJobId);
+        return jdbcTemplate.query(sql, stagingRowMapper(), syncJobId, lastNoticeNumber, lastNoticeNumber, limit);
     }
 
     private long insertReport(StagingRow row) {
