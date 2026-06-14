@@ -31,7 +31,8 @@ spring:
         highlight_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
   flyway:
-    enabled: false
+    enabled: true
+    locations: classpath:db/migration
 
 management:
   endpoints:
