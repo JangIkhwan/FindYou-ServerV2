@@ -38,6 +38,10 @@ management:
     web:
       exposure:
         include: prometheus,metrics,health,info
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
 ---
 # 개발용 DB
 spring:

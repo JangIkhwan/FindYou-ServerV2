@@ -56,6 +56,8 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
                     int stagedCount = stagingService.savePage(job.getId(), pageNo, pageResult);
                     syncJobService.recordBatchSuccess(job.getId(), pageNo, pageNo, pageResult.items().size(), stagedCount);
 
+                    log.info("공공데이터 동기화 잡 {} : {} / {} 완료 ", job.getId(), pageNo, (int) Math.ceil((double) totalExpectedCount / 1000));
+
                     pageNo++;
                 }
                 catch (Exception e){
