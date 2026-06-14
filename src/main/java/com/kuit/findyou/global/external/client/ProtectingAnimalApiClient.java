@@ -135,8 +135,18 @@ public class ProtectingAnimalApiClient {
         }
     }
 
-    public ProtectingAnimalPageResult fetchPage(int pageNo) {
-        ProtectingAnimalApiFullResponse response = fetchPageData(pageNo);
+    public ProtectingAnimalPageResult fetchPage(int pageNo, int pageSize) {
+        ProtectingAnimalApiFullResponse response = protectingAnimalRestClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path(API_ENDPOINT)
+                        .queryParam("serviceKey", properties.apiKey())
+                        .queryParam("pageNo", pageNo)
+                        .queryParam("numOfRows", pageSize)
+                        .queryParam("_type", "json")
+                        .build())
+                .header("Accept", "application/json")
+                .retrieve()
+                .body(ProtectingAnimalApiFullResponse.class);
 
         if (isEmptyResponse(response)) {
             throw new ProtectingAnimalApiClientException(PROTECTING_ANIMAL_API_CLIENT_EMPTY_RESPONSE);

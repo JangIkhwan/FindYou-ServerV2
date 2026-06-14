@@ -20,6 +20,7 @@ import static com.kuit.findyou.global.common.response.status.BaseExceptionRespon
 @Service
 public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncService{
 
+    private static final int PAGE_SIZE = 500;
     private final ProtectingAnimalApiClient protectingAnimalApiClient;
     private final SyncJobService syncJobService;
     private final ProtectingAnimalStagingService stagingService;
@@ -41,7 +42,7 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
                 ProtectingAnimalPageResult pageResult = null;
 
                 try{
-                    pageResult = protectingAnimalApiClient.fetchPage(pageNo);
+                    pageResult = protectingAnimalApiClient.fetchPage(pageNo, PAGE_SIZE);
 
                     if (totalExpectedCount == null) {
                         totalExpectedCount = pageResult.totalCount();
@@ -56,7 +57,7 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
                     int stagedCount = stagingService.savePage(job.getId(), pageNo, pageResult);
                     syncJobService.recordBatchSuccess(job.getId(), pageNo, pageNo, pageResult.items().size(), stagedCount);
 
-                    log.info("공공데이터 동기화 잡 {} : {} / {} 완료 ", job.getId(), pageNo, (int) Math.ceil((double) totalExpectedCount / 1000));
+                    log.info("공공데이터 동기화 잡 {} : {} / {} 완료 ", job.getId(), pageNo, (int) Math.ceil((double) totalExpectedCount / PAGE_SIZE));
 
                     pageNo++;
                 }
