@@ -28,9 +28,9 @@ public class SyncJobService {
 
     @Transactional
     public SyncJob startJob(SyncJobType jobType) {
-        if (hasActiveJob(jobType)) {
-            throw new IllegalStateException("Active sync job already exists. jobType=" + jobType);
-        }
+//        if (hasActiveJob(jobType)) {
+//            throw new IllegalStateException("Active sync job already exists. jobType=" + jobType);
+//        }
 
         return syncJobRepository.save(SyncJob.start(jobType));
     }
