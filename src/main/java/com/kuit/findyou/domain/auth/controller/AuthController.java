@@ -29,7 +29,7 @@ import static com.kuit.findyou.global.common.swagger.SwaggerResponseDescription.
 public class AuthController {
     private final AuthServiceFacade authServiceFacade;
 
-    @Value("${admin.api.key}")
+    @Value("${findyou.admin.api.key}")
     private String adminApiKey;
 
     @Operation(

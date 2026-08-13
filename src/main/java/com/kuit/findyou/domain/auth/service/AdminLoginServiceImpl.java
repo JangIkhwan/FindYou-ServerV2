@@ -18,10 +18,10 @@ public class AdminLoginServiceImpl implements AdminLoginService{
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
 
-    @Value("${admin.admin-user-id}")
+    @Value("${findyou.admin.admin-user-id}")
     private Long adminUserId;
 
-    @Value("${admin.access-ttl-ms}")
+    @Value("${findyou.admin.access-ttl-ms}")
     private Long adminAccessTtlMs;
 
     @Override
