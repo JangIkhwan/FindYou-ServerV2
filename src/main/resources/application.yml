@@ -1,118 +1,24 @@
 spring:
   application:
     name: findyou
+
   profiles:
-    group:
-      local : local-db, dev-port, common
-      dev: dev-db, dev-port, common
-      prod: prod-db, prod-port, common
     active: local
+
   web:
     resources:
       add-mappings: false
----
-# 로컬에서 사용하는 DB
-spring:
-  config:
-    activate:
-      on-profile: local-db
-  datasource:
-    url: ${LOCAL_DATASOURCE_URL}
-    username: ${LOCAL_DATASOURCE_USERNAME}
-    password: ${LOCAL_DATASOURCE_PASSWORD}
-    driver-class-name: com.mysql.cj.jdbc.Driver
-  jpa:
-    hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        format_sql: true
-        show_sql: true
-        highlight_sql: true
-        dialect: org.hibernate.dialect.MySQLDialect
-  flyway:
-    enabled: false
----
-# 개발용 DB
-spring:
-  config:
-    activate:
-      on-profile: dev-db
-  datasource:
-    url: ${DEV_DATASOURCE_URL}
-    username: ${DEV_DATASOURCE_USERNAME}
-    password: ${DEV_DATASOURCE_PASSWORD}
-    driver-class-name: com.mysql.cj.jdbc.Driver
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    properties:
-      hibernate:
-        format_sql: true
-        show_sql: true
-        highlight_sql: true
-        dialect: org.hibernate.dialect.MySQLDialect
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
----
-# 배포용 DB
-spring:
-  config:
-    activate:
-      on-profile: prod-db
-  datasource:
-    url: ${PROD_DATASOURCE_URL}
-    username: ${PROD_DATASOURCE_USERNAME}
-    password: ${PROD_DATASOURCE_PASSWORD}
-    driver-class-name: com.mysql.cj.jdbc.Driver
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
----
-# 개발용 포트
-spring:
-  config:
-    activate:
-      on-profile: dev-port
-server:
-  port: 9001
-  address: 0.0.0.0
----
-# 배포용 포트
-spring:
-  config:
-    activate:
-      on-profile: prod-port
-server:
-  port: 9002
----
-# 공통 속성
-spring:
-  config:
-    activate:
-      on-profile: common
-  datasource:
-    hikari:
-      maximum-pool-size: 30  # 기본은 10, 상황에 맞게 조절
-      minimum-idle: 10
-      idle-timeout: 600000
-      max-lifetime: 1800000
-      connection-timeout: 30000
-  data:
-    redis:
-      host: ${REDIS_HOST}
-      port: 6379
+
   servlet:
     multipart:
       max-file-size: 30MB      # 파일 하나당 최대 30MB
       max-request-size: 150MB   # 요청당 총 크기를 150MB로
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: 6379
+
   ai:
     openai:
       api-key: ${OPENAI_API_KEY}
@@ -121,6 +27,7 @@ spring:
           model: gpt-4o
           temperature: 0
           max-tokens: 100
+
     retry:
       max-attempts: 2
       backoff:
@@ -131,25 +38,15 @@ spring:
 server:
   forward-headers-strategy: framework
 
-openapi:
-  protecting-animal:
-    api-url: https://apis.data.go.kr/1543061/abandonmentPublicService_v2
-    api-key: ${PROTECTING_ANIMAL_API_KEY}
-  rescue-animal-stats:
-    api-url: https://apis.data.go.kr/1543061/rescueAnimalStatsService/rescueAnimalStats
-    api-key: ${PROTECTING_ANIMAL_API_KEY}
-  loss-animal-info:
-    api-url: https://apis.data.go.kr/1543061/lossInfoService/lossInfo
-    api-key: ${PROTECTING_ANIMAL_API_KEY}
-  kakao:
-    api-url: "https://dapi.kakao.com/v2/local/search/address.json"
-    api-key: ${KAKAO_REST_API_KEY}
-  volunteer-work:
-    api-url: http://openapi.1365.go.kr/openapi/service/rest/VolunteerPartcptnService/getVltrSearchWordList
-
 logging:
   level:
     root: info
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
 
 findyou:
   jwt:
@@ -157,16 +54,45 @@ findyou:
       access-token : ${JWT_ACCESS_EXPIRE_MS}
       refresh-token : ${JWT_REFRESH_EXPIRE_MS}
     secret-key : ${JWT_SECRET_KEY}
+
   home-stats:
     parsing-timeout-sec: ${HOME_STATS_PARSING_TIMEOUT_SEC}
+
+  admin:
+    admin-user-id: ${ADMIN_USER_ID}
+    access-ttl-ms: ${ADMIN_ACCESS_TTL_MS}
+    api:
+      key: ${ADMIN_API_KEY}
+
+openapi:
+  protecting-animal:
+    api-url: https://apis.data.go.kr/1543061/abandonmentPublicService_v2
+    api-key: ${PROTECTING_ANIMAL_API_KEY}
+
+  rescue-animal-stats:
+    api-url: https://apis.data.go.kr/1543061/rescueAnimalStatsService/rescueAnimalStats
+    api-key: ${PROTECTING_ANIMAL_API_KEY}
+
+  loss-animal-info:
+    api-url: https://apis.data.go.kr/1543061/lossInfoService/lossInfo
+    api-key: ${PROTECTING_ANIMAL_API_KEY}
+
+  kakao:
+    api-url: "https://dapi.kakao.com/v2/local/search/address.json"
+    api-key: ${KAKAO_REST_API_KEY}
+
+  volunteer-work:
+    api-url: http://openapi.1365.go.kr/openapi/service/rest/VolunteerPartcptnService/getVltrSearchWordList
 
 cloud:
   aws:
     region:
       static: ap-northeast-2 # 서울 리전
+
     credentials:
       access-key: ${AWS_ACCESS_KEY_ID}
       secret-key: ${AWS_SECRET_ACCESS_KEY}
+
     s3:
       bucket: ${S3_BUCKET_NAME}
       base-url: ${S3_BASE_URL}
@@ -180,22 +106,10 @@ resilience4j:
         retry-exceptions:
           - org.springframework.web.client.RestClientException
           - org.springframework.web.client.ResourceAccessException
+
   ratelimiter:
     instances:
       kakao:
         limit-for-period: 7
         limit-refresh-period: 1s
         timeout-duration: 2s
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health, info, prometheus
-
-
-admin:
-  admin-user-id: ${ADMIN_USER_ID}
-  access-ttl-ms: ${ADMIN_ACCESS_TTL_MS}
-  api:
-    key: ${ADMIN_API_KEY}
