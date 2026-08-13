@@ -1,7 +1,7 @@
 # 로컬에서 사용하는 DB
 spring:
   datasource:
-    url: ${DB_URL}
+    url: ${DB_URL}/${DB_DATABASE}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
