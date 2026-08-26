@@ -8,7 +8,6 @@ import com.kuit.findyou.domain.report.model.ProtectingReport;
 import com.kuit.findyou.domain.report.model.ReportTag;
 import com.kuit.findyou.domain.report.repository.ProtectingReportRepository;
 import com.kuit.findyou.global.common.exception.CustomException;
-import com.kuit.findyou.global.common.response.status.BaseExceptionResponseStatus;
 import com.kuit.findyou.global.external.client.KakaoCoordinateClient;
 import com.kuit.findyou.global.external.client.ProtectingAnimalApiClient;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalItemDTO;
@@ -21,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static com.kuit.findyou.global.common.response.status.BaseExceptionResponseStatus.*;
@@ -44,6 +42,7 @@ public class ProtectingReportSyncServiceImpl implements ProtectingReportSyncServ
     public void syncProtectingReports() {
         long startTime = System.currentTimeMillis();
 
+        log.info("[구조동물 데이터 동기화 시작]");
         try {
             List<ProtectingAnimalItemDTO> apiItems = protectingAnimalApiClient.fetchAllProtectingAnimals();
             SyncResult syncResult = synchronizeData(apiItems);
