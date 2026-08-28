@@ -46,7 +46,7 @@ tasks.register('syncMemoryPerfTest', Test) {
 
 	testClassesDirs = sourceSets.perfTest.output.classesDirs
 	classpath = sourceSets.perfTest.runtimeClasspath
-	include '**/*MemoryPerfTest.class'
+	include '**/ProtectingReportSyncMemoryPerfTest.class'
 	useJUnitPlatform()
 	shouldRunAfter test
 
@@ -61,6 +61,34 @@ tasks.register('syncMemoryPerfTest', Test) {
 	systemProperty 'syncPerfMinHeap', System.getProperty('syncPerfMinHeap', '512m')
 	systemProperty 'syncPerfMaxHeap', System.getProperty('syncPerfMaxHeap', '512m')
 	systemProperty 'syncPerfOutput', System.getProperty('syncPerfOutput', "${buildDir}/reports/sync-memory-perf/results.csv")
+
+	testLogging {
+		showStandardStreams = true
+		events 'passed', 'failed', 'skipped'
+	}
+}
+
+tasks.register('syncV2MemoryPerfTest', Test) {
+	description = 'Runs the protecting report sync V2 memory performance test.'
+	group = 'verification'
+
+	testClassesDirs = sourceSets.perfTest.output.classesDirs
+	classpath = sourceSets.perfTest.runtimeClasspath
+	include '**/ProtectingReportSyncV2MemoryPerfTest.class'
+	useJUnitPlatform()
+	shouldRunAfter test
+
+	minHeapSize = System.getProperty('syncPerfMinHeap', '512m')
+	maxHeapSize = System.getProperty('syncPerfMaxHeap', '512m')
+	jvmArgs '-XX:+UseG1GC'
+
+	systemProperty 'syncPerfRows', System.getProperty('syncPerfRows', '1000')
+	systemProperty 'syncPerfVersion', System.getProperty('syncPerfVersion', 'after')
+	systemProperty 'syncPerfWarmups', System.getProperty('syncPerfWarmups', '1')
+	systemProperty 'syncPerfRuns', System.getProperty('syncPerfRuns', '3')
+	systemProperty 'syncPerfMinHeap', System.getProperty('syncPerfMinHeap', '512m')
+	systemProperty 'syncPerfMaxHeap', System.getProperty('syncPerfMaxHeap', '512m')
+	systemProperty 'syncPerfOutput', System.getProperty('syncPerfOutput', "${buildDir}/reports/sync-memory-perf/v2-results.csv")
 
 	testLogging {
 		showStandardStreams = true
