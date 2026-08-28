@@ -120,7 +120,7 @@ public class ProtectingAnimalApiClient {
         }
         catch (RestClientResponseException e) {
             // HTTP 4xx / 5xx
-            log.error("[fetchRescuedAnimalCount] (bgnde={}, endde={}) 외부서버와 통신 불가  HTTP = {} body = {}", bgnde, endde, e.getRawStatusCode(), e.getResponseBodyAsString(), e);
+            log.error("[fetchRescuedAnimalCount] (bgnde={}, endde={}) 외부서버와 통신 불가  HTTP = {} body = {}", bgnde, endde, e.getStatusCode(), e.getResponseBodyAsString(), e);
             throw new CustomException(HOME_STATISTICS_UPDATE_FAILED);
         }
         catch (ResourceAccessException e) {
