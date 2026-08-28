@@ -5,7 +5,6 @@ import com.kuit.findyou.domain.image.model.ReportImage;
 import com.kuit.findyou.domain.notification.model.NotificationHistory;
 import com.kuit.findyou.domain.user.model.User;
 import com.kuit.findyou.global.common.model.BaseEntity;
-import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.*;
 
