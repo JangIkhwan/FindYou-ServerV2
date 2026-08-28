@@ -102,13 +102,33 @@ tasks.register('syncConnectionPerfTest', Test) {
 
 	testClassesDirs = sourceSets.perfTest.output.classesDirs
 	classpath = sourceSets.perfTest.runtimeClasspath
-	include '**/*ConnectionPerfTest.class'
+	include '**/ProtectingReportSyncConnectionPerfTest.class'
 	useJUnitPlatform()
 	shouldRunAfter test
 
 	systemProperty 'syncConnPerfVersion', System.getProperty('syncConnPerfVersion', 'before')
 	systemProperty 'syncConnPerfRuns', System.getProperty('syncConnPerfRuns', '3')
 	systemProperty 'syncConnPerfOutput', System.getProperty('syncConnPerfOutput', "${buildDir}/reports/sync-connection-perf/results.csv")
+
+	testLogging {
+		showStandardStreams = true
+		events 'passed', 'failed', 'skipped'
+	}
+}
+
+tasks.register('syncV2ConnectionPerfTest', Test) {
+	description = 'Runs the protecting report sync V2 connection hold performance test.'
+	group = 'verification'
+
+	testClassesDirs = sourceSets.perfTest.output.classesDirs
+	classpath = sourceSets.perfTest.runtimeClasspath
+	include '**/ProtectingReportSyncV2ConnectionPerfTest.class'
+	useJUnitPlatform()
+	shouldRunAfter test
+
+	systemProperty 'syncConnPerfVersion', System.getProperty('syncConnPerfVersion', 'after')
+	systemProperty 'syncConnPerfRuns', System.getProperty('syncConnPerfRuns', '3')
+	systemProperty 'syncConnPerfOutput', System.getProperty('syncConnPerfOutput', "${buildDir}/reports/sync-connection-perf/v2-results.csv")
 
 	testLogging {
 		showStandardStreams = true
