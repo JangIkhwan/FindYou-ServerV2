@@ -16,9 +16,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -60,6 +62,13 @@ class ProtectingAnimalStagingServiceTest {
                 2500,
                 List.of(item)
         );
+        when(kakaoCoordinateClient.requestCoordinateOrDefault("서울시 강남구"))
+                .thenReturn(new KakaoCoordinateClient.Coordinate(
+                        BigDecimal.valueOf(37.123456),
+                        BigDecimal.valueOf(127.123456)
+                ));
+        when(protectingAnimalStagingWriter.saveRows(anyList()))
+                .thenAnswer(invocation -> invocation.<List<PublicAnimalStagingRow>>getArgument(0).size());
 
         // when
         int savedCount = protectingAnimalStagingService.savePage(syncJobId, batchNo, pageResult);
@@ -68,7 +77,7 @@ class ProtectingAnimalStagingServiceTest {
         assertThat(savedCount).isEqualTo(1);
 
         ArgumentCaptor<List<PublicAnimalStagingRow>> captor = ArgumentCaptor.forClass(List.class);
-        verify(publicAnimalStagingRepository).upsertAll(captor.capture());
+        verify(protectingAnimalStagingWriter).saveRows(captor.capture());
 
         List<PublicAnimalStagingRow> savedRows = captor.getValue();
         assertThat(savedRows).hasSize(1);
