@@ -35,6 +35,8 @@ findyou:
     refresh-token-redis-key-prefix: "refresh-token-redis-key-prefix:"
   home-stats:
     parsing-timeout-sec: 20
+  sync:
+    owner-id: test-owner
 
 cloud:
   aws:

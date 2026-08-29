@@ -6,5 +6,6 @@ public enum SyncJobStatus {
     MERGING,
     SUCCESS,
     FAILED,
-    VALIDATION_FAILED
+    VALIDATION_FAILED,
+    EXPIRED
 }

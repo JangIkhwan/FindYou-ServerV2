@@ -15,6 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Optional;
 
@@ -22,7 +23,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -43,8 +43,6 @@ class SyncJobServiceTest {
     void should_StartJob_When_NoActiveJobExists() {
         // given
         SyncJobType jobType = SyncJobType.PROTECTING_REPORT_SYNC;
-        when(syncJobRepository.existsByJobTypeAndStatusIn(eq(jobType), any(Collection.class)))
-                .thenReturn(false);
         when(syncJobRepository.save(any(SyncJob.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -55,18 +53,50 @@ class SyncJobServiceTest {
         assertThat(result.getJobType()).isEqualTo(jobType);
         assertThat(result.getStatus()).isEqualTo(SyncJobStatus.RUNNING);
         assertThat(result.getStartedAt()).isNotNull();
+        assertThat(result.getLastHeartbeatAt()).isNotNull();
+        assertThat(result.getLeaseUntil()).isAfter(result.getLastHeartbeatAt());
 
         ArgumentCaptor<SyncJob> captor = ArgumentCaptor.forClass(SyncJob.class);
         verify(syncJobRepository).save(captor.capture());
         assertThat(captor.getValue()).isSameAs(result);
+        verify(syncJobRepository).expireActiveJobs(
+                eq(jobType),
+                any(Collection.class),
+                eq(SyncJobStatus.EXPIRED),
+                any(LocalDateTime.class),
+                eq("Sync job lease expired")
+        );
     }
 
     @Test
-    @DisplayName("활성 job이 있으면 새 job을 시작하지 않는다")
-    void should_ThrowException_When_ActiveJobExists() {
+    @DisplayName("활성 job 존재 여부를 조회한다")
+    void should_CheckActiveJobExists() {
         // given
         SyncJobType jobType = SyncJobType.PROTECTING_REPORT_SYNC;
-        when(syncJobRepository.existsByJobTypeAndStatusIn(eq(jobType), any(Collection.class)))
+        when(syncJobRepository.existsByJobTypeAndStatusInAndLeaseUntilAfter(
+                eq(jobType),
+                any(Collection.class),
+                any(LocalDateTime.class)
+        ))
+                .thenReturn(true);
+
+        // when
+        boolean result = syncJobService.hasActiveJob(jobType);
+
+        // then
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    @DisplayName("유효한 active job이 있으면 새 job을 시작하지 않는다")
+    void should_ThrowException_When_ActiveJobLeaseIsValid() {
+        // given
+        SyncJobType jobType = SyncJobType.PROTECTING_REPORT_SYNC;
+        when(syncJobRepository.existsByJobTypeAndStatusInAndLeaseUntilAfter(
+                eq(jobType),
+                any(Collection.class),
+                any(LocalDateTime.class)
+        ))
                 .thenReturn(true);
 
         // when & then
@@ -74,7 +104,13 @@ class SyncJobServiceTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Active sync job already exists");
 
-        verify(syncJobRepository, never()).save(any());
+        verify(syncJobRepository).expireActiveJobs(
+                eq(jobType),
+                any(Collection.class),
+                eq(SyncJobStatus.EXPIRED),
+                any(LocalDateTime.class),
+                eq("Sync job lease expired")
+        );
     }
 
     @Test
@@ -90,6 +126,8 @@ class SyncJobServiceTest {
 
         // then
         assertThat(syncJob.getTotalStagedCount()).isEqualTo(98);
+        assertThat(syncJob.getLastHeartbeatAt()).isNotNull();
+        assertThat(syncJob.getLeaseUntil()).isAfter(syncJob.getLastHeartbeatAt());
 
         ArgumentCaptor<SyncJobBatch> captor = ArgumentCaptor.forClass(SyncJobBatch.class);
         verify(syncJobBatchRepository).save(captor.capture());

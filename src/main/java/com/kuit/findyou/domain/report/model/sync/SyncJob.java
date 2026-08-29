@@ -56,6 +56,15 @@ public class SyncJob {
     @Column(name = "error_message", length = 1000)
     private String errorMessage;
 
+    @Column(name = "last_heartbeat_at")
+    private LocalDateTime lastHeartbeatAt;
+
+    @Column(name = "lease_until")
+    private LocalDateTime leaseUntil;
+
+    @Column(name = "owner_id", length = 255)
+    private String ownerId;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -64,14 +73,21 @@ public class SyncJob {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    private SyncJob(SyncJobType jobType) {
+    private SyncJob(SyncJobType jobType, String ownerId, LocalDateTime now, LocalDateTime leaseUntil) {
         this.jobType = jobType;
         this.status = SyncJobStatus.RUNNING;
-        this.startedAt = LocalDateTime.now();
+        this.startedAt = now;
+        this.ownerId = ownerId;
+        refreshHeartbeat(now, leaseUntil);
+    }
+
+    public static SyncJob start(SyncJobType jobType, String ownerId, LocalDateTime now, LocalDateTime leaseUntil) {
+        return new SyncJob(jobType, ownerId, now, leaseUntil);
     }
 
     public static SyncJob start(SyncJobType jobType) {
-        return new SyncJob(jobType);
+        LocalDateTime now = LocalDateTime.now();
+        return new SyncJob(jobType, null, now, null);
     }
 
     public void updateExpectedCount(Integer totalExpectedCount) {
@@ -111,6 +127,17 @@ public class SyncJob {
         this.status = SyncJobStatus.FAILED;
         this.finishedAt = LocalDateTime.now();
         this.errorMessage = truncateErrorMessage(errorMessage);
+    }
+
+    public void markExpired(String errorMessage) {
+        this.status = SyncJobStatus.EXPIRED;
+        this.finishedAt = LocalDateTime.now();
+        this.errorMessage = truncateErrorMessage(errorMessage);
+    }
+
+    public void refreshHeartbeat(LocalDateTime heartbeatAt, LocalDateTime leaseUntil) {
+        this.lastHeartbeatAt = heartbeatAt;
+        this.leaseUntil = leaseUntil;
     }
 
     private String truncateErrorMessage(String errorMessage) {

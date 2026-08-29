@@ -170,6 +170,8 @@ findyou:
     secret-key : ${JWT_SECRET_KEY}
   home-stats:
     parsing-timeout-sec: ${HOME_STATS_PARSING_TIMEOUT_SEC}
+  sync:
+    owner-id: ${FINDYOU_SYNC_OWNER_ID:${HOSTNAME:local}}
 
 cloud:
   aws:

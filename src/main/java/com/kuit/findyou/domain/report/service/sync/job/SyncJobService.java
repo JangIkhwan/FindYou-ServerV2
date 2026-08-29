@@ -7,9 +7,12 @@ import com.kuit.findyou.domain.report.model.sync.SyncJobType;
 import com.kuit.findyou.domain.report.repository.sync.SyncJobBatchRepository;
 import com.kuit.findyou.domain.report.repository.sync.SyncJobRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -17,6 +20,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class SyncJobService {
 
+    private static final Duration LEASE_DURATION = Duration.ofMinutes(10);
     private static final Set<SyncJobStatus> ACTIVE_STATUSES = EnumSet.of(
             SyncJobStatus.RUNNING,
             SyncJobStatus.STAGING_COMPLETED,
@@ -26,24 +30,31 @@ public class SyncJobService {
     private final SyncJobRepository syncJobRepository;
     private final SyncJobBatchRepository syncJobBatchRepository;
 
+    @Value("${findyou.sync.owner-id:local}")
+    private String ownerId;
+
     @Transactional
     public SyncJob startJob(SyncJobType jobType) {
-//        if (hasActiveJob(jobType)) {
-//            throw new IllegalStateException("Active sync job already exists. jobType=" + jobType);
-//        }
+        LocalDateTime now = LocalDateTime.now();
+        expireLeaseTimedOutJobs(jobType, now);
 
-        return syncJobRepository.save(SyncJob.start(jobType));
+        if (hasActiveJob(jobType, now)) {
+            throw new IllegalStateException("Active sync job already exists. jobType=" + jobType);
+        }
+
+        return syncJobRepository.save(SyncJob.start(jobType, ownerId, now, calculateLeaseUntil(now)));
     }
 
     @Transactional(readOnly = true)
     public boolean hasActiveJob(SyncJobType jobType) {
-        return syncJobRepository.existsByJobTypeAndStatusIn(jobType, ACTIVE_STATUSES);
+        return hasActiveJob(jobType, LocalDateTime.now());
     }
 
     @Transactional
     public void updateExpectedCount(Long jobId, Integer totalExpectedCount) {
         SyncJob syncJob = getSyncJob(jobId);
         syncJob.updateExpectedCount(totalExpectedCount);
+        refreshHeartbeat(syncJob);
     }
 
     @Transactional
@@ -53,6 +64,7 @@ public class SyncJobService {
         batch.markSuccess(stagedCount);
 
         syncJob.addStagedCount(stagedCount);
+        refreshHeartbeat(syncJob);
         syncJobBatchRepository.save(batch);
     }
 
@@ -63,6 +75,7 @@ public class SyncJobService {
         batch.markFailed(errorMessage);
 
         syncJob.setFailedBatchNo(batchNo);
+        refreshHeartbeat(syncJob);
         syncJobBatchRepository.save(batch);
     }
 
@@ -70,12 +83,14 @@ public class SyncJobService {
     public void markStagingCompleted(Long jobId) {
         SyncJob syncJob = getSyncJob(jobId);
         syncJob.markStagingCompleted();
+        refreshHeartbeat(syncJob);
     }
 
     @Transactional
     public void markMerging(Long jobId) {
         SyncJob syncJob = getSyncJob(jobId);
         syncJob.markMerging();
+        refreshHeartbeat(syncJob);
     }
 
     @Transactional
@@ -104,5 +119,28 @@ public class SyncJobService {
     private SyncJob getSyncJob(Long jobId) {
         return syncJobRepository.findById(jobId)
                 .orElseThrow(() -> new IllegalArgumentException("SyncJob not found. jobId=" + jobId));
+    }
+
+    private boolean hasActiveJob(SyncJobType jobType, LocalDateTime now) {
+        return syncJobRepository.existsByJobTypeAndStatusInAndLeaseUntilAfter(jobType, ACTIVE_STATUSES, now);
+    }
+
+    private void expireLeaseTimedOutJobs(SyncJobType jobType, LocalDateTime now) {
+        syncJobRepository.expireActiveJobs(
+                jobType,
+                ACTIVE_STATUSES,
+                SyncJobStatus.EXPIRED,
+                now,
+                "Sync job lease expired"
+        );
+    }
+
+    private void refreshHeartbeat(SyncJob syncJob) {
+        LocalDateTime now = LocalDateTime.now();
+        syncJob.refreshHeartbeat(now, calculateLeaseUntil(now));
+    }
+
+    private LocalDateTime calculateLeaseUntil(LocalDateTime now) {
+        return now.plus(LEASE_DURATION);
     }
 }
