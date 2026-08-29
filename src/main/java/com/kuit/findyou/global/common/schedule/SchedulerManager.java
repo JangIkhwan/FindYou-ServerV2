@@ -7,6 +7,7 @@ import com.kuit.findyou.domain.home.exception.CacheUpdateFailedException;
 import com.kuit.findyou.domain.home.service.stats.HomeStatisticsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +25,7 @@ public class SchedulerManager {
      * 구조 동물 데이터를 매일 새벽 4시에 동기화
      */
     @Scheduled(cron = "0 0 4 * * *")
+    @SchedulerLock(name = "syncProtectingAnimals", lockAtMostFor = "PT30M", lockAtLeastFor = "PT0S")
     public void syncProtectingAnimals() {
         protectingReportSyncService.syncProtectingReports();
     }
