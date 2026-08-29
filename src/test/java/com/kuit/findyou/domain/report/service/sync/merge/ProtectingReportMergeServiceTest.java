@@ -117,6 +117,39 @@ class ProtectingReportMergeServiceTest {
     }
 
     @Test
+    @DisplayName("staging에서 사라진 보호 공고를 soft delete한 후 active 이미지도 soft delete한다")
+    void should_SoftDeleteActiveImages_When_ProtectingReportMissingFromStaging() {
+        // given
+        long syncJobId = insertSyncJob();
+        long reportId = insertExistingProtectingReport("OLD-IMG-1", "이전품종", "강아지", "이전주소", "이전 특징", "Y");
+        insertReportImage(reportId, "https://old.example.com/1.jpg", "Y");
+        insertReportImage(reportId, "https://old.example.com/2.jpg", "Y");
+        insertReportImage(reportId, "https://old.example.com/already-inactive.jpg", "N");
+
+        // when
+        int mergedCount = protectingReportMergeService.merge(syncJobId);
+
+        // then
+        assertThat(mergedCount).isZero();
+
+        Map<String, Object> row = findProtectingReport("OLD-IMG-1");
+        assertThat(row.get("status")).isEqualTo("N");
+        assertThat(findActiveReportImageUrls(reportId)).isEmpty();
+        assertThat(findInactiveReportImageUrls(reportId))
+                .containsExactlyInAnyOrder(
+                        "https://old.example.com/1.jpg",
+                        "https://old.example.com/2.jpg",
+                        "https://old.example.com/already-inactive.jpg"
+                );
+
+        entityManager.flush();
+        entityManager.clear();
+
+        ProtectingReport foundReport = protectingReportRepository.findWithImagesById(reportId).orElseThrow();
+        assertThat(foundReport.getReportImages()).isEmpty();
+    }
+
+    @Test
     @DisplayName("기존 보호 공고 이미지를 staging 이미지로 교체하고 active 이미지만 연관관계로 조회한다")
     void should_ReplaceExistingProtectingReportImages_And_LoadOnlyActiveImages() {
         // given

@@ -30,6 +30,7 @@ public class ProtectingReportMergeService {
         replaceReportImages(syncJobId);
 
         softDeleteReportsMissingFromStaging(syncJobId);
+        softDeleteImagesOfInactiveReportsMissingFromStaging(syncJobId);
 
         return existingCount + insertedCount;
     }
@@ -271,6 +272,25 @@ public class ProtectingReportMergeService {
                 )
                 """;
         return jdbcTemplate.update(sql, syncJobId);
+    }
+
+    private void softDeleteImagesOfInactiveReportsMissingFromStaging(Long syncJobId) {
+        String sql = """
+                  UPDATE report_images ri
+                  JOIN reports r ON r.id = ri.report_id
+                  JOIN protecting_reports pr ON pr.id = r.id
+                  SET ri.status = 'N',
+                      ri.updated_at = CURRENT_TIMESTAMP
+                  WHERE r.status = 'N'
+                    AND ri.status = 'Y'
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM public_animal_staging s
+                        WHERE s.sync_job_id = ?
+                          AND s.notice_number = pr.notice_number
+                    )
+                """;
+        jdbcTemplate.update(sql, syncJobId);
     }
 
     public void deleteStaging(Long syncJobId) {
