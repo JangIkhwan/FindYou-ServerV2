@@ -30,6 +30,9 @@ public class ProtectingReportMergeService {
         updateExistingProtectingReports(syncJobId);
 
         int insertedCount = insertNewReports(syncJobId);
+
+        replaceReportImages(syncJobId);
+
         softDeleteReportsMissingFromStaging(syncJobId);
 
         return existingCount + insertedCount;
@@ -214,6 +217,52 @@ public class ProtectingReportMergeService {
                 row.careTel(),
                 row.authority()
         );
+    }
+
+    private void replaceReportImages(Long syncJobId) {
+        deactivateExistingReportImages(syncJobId);
+        insertReportImagesFromStaging(syncJobId);
+    }
+
+    private void deactivateExistingReportImages(Long syncJobId) {
+        String sql = """
+                UPDATE report_images ri
+                JOIN protecting_reports pr ON pr.id = ri.report_id
+                JOIN public_animal_staging s ON s.notice_number = pr.notice_number
+                SET ri.status = 'N',
+                    ri.updated_at = CURRENT_TIMESTAMP
+                WHERE s.sync_job_id = ?
+                  AND ri.status = 'Y'
+                """;
+        jdbcTemplate.update(sql, syncJobId);
+    }
+
+    private void insertReportImagesFromStaging(Long syncJobId) {
+        insertReportImagesFromStagingColumn(syncJobId, "image_url1");
+        insertReportImagesFromStagingColumn(syncJobId, "image_url2");
+    }
+
+    private void insertReportImagesFromStagingColumn(Long syncJobId, String imageUrlColumn) {
+        String sql = """
+                INSERT INTO report_images (
+                    image_url,
+                    report_id,
+                    status,
+                    created_at,
+                    updated_at
+                )
+                SELECT s.%s,
+                       pr.id,
+                       'Y',
+                       CURRENT_TIMESTAMP,
+                       CURRENT_TIMESTAMP
+                FROM public_animal_staging s
+                JOIN protecting_reports pr ON pr.notice_number = s.notice_number
+                WHERE s.sync_job_id = ?
+                  AND s.%s IS NOT NULL
+                  AND TRIM(s.%s) <> ''
+                """.formatted(imageUrlColumn, imageUrlColumn, imageUrlColumn);
+        jdbcTemplate.update(sql, syncJobId);
     }
 
     private int softDeleteReportsMissingFromStaging(Long syncJobId) {

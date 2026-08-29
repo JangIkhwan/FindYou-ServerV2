@@ -1,6 +1,9 @@
 package com.kuit.findyou.domain.report.service.sync.merge;
 
+import com.kuit.findyou.domain.report.model.ProtectingReport;
+import com.kuit.findyou.domain.report.repository.ProtectingReportRepository;
 import com.kuit.findyou.global.config.TestDatabaseConfig;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,12 +35,19 @@ class ProtectingReportMergeServiceTest {
     @Autowired
     JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    ProtectingReportRepository protectingReportRepository;
+
+    @Autowired
+    EntityManager entityManager;
+
     @BeforeEach
     void cleanDatabase() {
         jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 0");
         jdbcTemplate.execute("TRUNCATE TABLE public_animal_staging");
         jdbcTemplate.execute("TRUNCATE TABLE sync_job_batch");
         jdbcTemplate.execute("TRUNCATE TABLE sync_job");
+        jdbcTemplate.execute("TRUNCATE TABLE report_images");
         jdbcTemplate.execute("TRUNCATE TABLE protecting_reports");
         jdbcTemplate.execute("TRUNCATE TABLE reports");
         jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 1");
@@ -104,6 +115,80 @@ class ProtectingReportMergeServiceTest {
         assertThat(row.get("status")).isEqualTo("N");
         assertThat(row.get("notice_number")).isEqualTo("OLD-1");
     }
+
+    @Test
+    @DisplayName("기존 보호 공고 이미지를 staging 이미지로 교체하고 active 이미지만 연관관계로 조회한다")
+    void should_ReplaceExistingProtectingReportImages_And_LoadOnlyActiveImages() {
+        // given
+        long syncJobId = insertSyncJob();
+        long reportId = insertExistingProtectingReport("EXIST-IMG-1", "이전품종", "강아지", "이전주소", "이전 특징", "Y");
+        insertReportImage(reportId, "https://old.example.com/1.jpg", "Y");
+        insertReportImage(reportId, "https://old.example.com/2.jpg", "Y");
+        insertStaging(
+                syncJobId,
+                "EXIST-IMG-1",
+                "최신품종",
+                "강아지",
+                "최신주소",
+                "최신 특징",
+                "https://new.example.com/1.jpg",
+                "https://new.example.com/2.jpg"
+        );
+
+        // when
+        int mergedCount = protectingReportMergeService.merge(syncJobId);
+
+        // then
+        assertThat(mergedCount).isEqualTo(1);
+        assertThat(countReportImages(reportId)).isEqualTo(4);
+        assertThat(findActiveReportImageUrls(reportId))
+                .containsExactlyInAnyOrder("https://new.example.com/1.jpg", "https://new.example.com/2.jpg");
+        assertThat(findInactiveReportImageUrls(reportId))
+                .containsExactlyInAnyOrder("https://old.example.com/1.jpg", "https://old.example.com/2.jpg");
+
+        entityManager.flush();
+        entityManager.clear();
+
+        ProtectingReport foundReport = protectingReportRepository.findWithImagesById(reportId).orElseThrow();
+        assertThat(foundReport.getReportImagesUrlList())
+                .containsExactlyInAnyOrder("https://new.example.com/1.jpg", "https://new.example.com/2.jpg");
+    }
+
+    @Test
+    @DisplayName("공공 API 이미지가 null 또는 빈 문자열이면 기존 보호 공고의 active 이미지가 없어진다")
+    void should_RemoveActiveImages_When_StagingImagesAreNullOrBlank() {
+        // given
+        long syncJobId = insertSyncJob();
+        long reportId = insertExistingProtectingReport("EXIST-IMG-EMPTY", "이전품종", "강아지", "이전주소", "이전 특징", "Y");
+        insertReportImage(reportId, "https://old.example.com/1.jpg", "Y");
+        insertReportImage(reportId, "https://old.example.com/2.jpg", "Y");
+        insertStaging(
+                syncJobId,
+                "EXIST-IMG-EMPTY",
+                "최신품종",
+                "강아지",
+                "최신주소",
+                "최신 특징",
+                null,
+                "   "
+        );
+
+        // when
+        int mergedCount = protectingReportMergeService.merge(syncJobId);
+
+        // then
+        assertThat(mergedCount).isEqualTo(1);
+        assertThat(countReportImages(reportId)).isEqualTo(2);
+        assertThat(findActiveReportImageUrls(reportId)).isEmpty();
+        assertThat(findInactiveReportImageUrls(reportId))
+                .containsExactlyInAnyOrder("https://old.example.com/1.jpg", "https://old.example.com/2.jpg");
+
+        entityManager.flush();
+        entityManager.clear();
+
+        ProtectingReport foundReport = protectingReportRepository.findWithImagesById(reportId).orElseThrow();
+        assertThat(foundReport.getReportImages()).isEmpty();
+    }
     
     @Test
     @DisplayName("jobId에 해당하는 스테이징 데이터를 삭제한다")
@@ -144,6 +229,11 @@ class ProtectingReportMergeServiceTest {
     }
 
     private long insertStaging(long syncJobId, String noticeNumber, String breed, String species, String address, String significant) {
+        return insertStaging(syncJobId, noticeNumber, breed, species, address, significant, null, null);
+    }
+
+    private long insertStaging(long syncJobId, String noticeNumber, String breed, String species, String address,
+                               String significant, String imageUrl1, String imageUrl2) {
         String sql = """
                 INSERT INTO public_animal_staging (
                     sync_job_id,
@@ -167,13 +257,15 @@ class ProtectingReportMergeServiceTest {
                     care_name,
                     care_tel,
                     authority,
+                    image_url1,
+                    image_url2,
                     raw_data,
                     raw_hash
                 )
                 VALUES (?, 1, ?, ?, ?, '2026-05-01', ?, 37.123456, 127.123456,
                         'M', 'Y', '3', '5', '갈색', ?, '테스트 발견장소',
                         '2026-05-01', '2026-05-10', '테스트보호소', '02-123-4567',
-                        '테스트구청', '{}', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+                        '테스트구청', ?, ?, '{}', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
                 """;
         
         KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -185,6 +277,8 @@ class ProtectingReportMergeServiceTest {
             ps.setString(4, breed);
             ps.setString(5, address);
             ps.setString(6, significant);
+            ps.setString(7, imageUrl1);
+            ps.setString(8, imageUrl2);
             return ps;
         }, keyHolder);
 
@@ -253,6 +347,20 @@ class ProtectingReportMergeServiceTest {
         return keyHolder.getKey().longValue();
     }
 
+    private void insertReportImage(long reportId, String imageUrl, String status) {
+        String sql = """
+                INSERT INTO report_images (
+                    image_url,
+                    report_id,
+                    status,
+                    created_at,
+                    updated_at
+                )
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """;
+        jdbcTemplate.update(sql, imageUrl, reportId, status);
+    }
+
     private Map<String, Object> findProtectingReport(String noticeNumber) {
         String sql = """
                 SELECT r.breed,
@@ -293,5 +401,34 @@ class ProtectingReportMergeServiceTest {
         """;
 
         return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, Boolean.class, id));
+    }
+
+    private int countReportImages(long reportId) {
+        String sql = """
+                SELECT COUNT(*)
+                FROM report_images
+                WHERE report_id = ?
+                """;
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, reportId);
+        return count == null ? 0 : count;
+    }
+
+    private List<String> findActiveReportImageUrls(long reportId) {
+        return findReportImageUrlsByStatus(reportId, "Y");
+    }
+
+    private List<String> findInactiveReportImageUrls(long reportId) {
+        return findReportImageUrlsByStatus(reportId, "N");
+    }
+
+    private List<String> findReportImageUrlsByStatus(long reportId, String status) {
+        String sql = """
+                SELECT image_url
+                FROM report_images
+                WHERE report_id = ?
+                  AND status = ?
+                ORDER BY image_url
+                """;
+        return jdbcTemplate.queryForList(sql, String.class, reportId, status);
     }
 }

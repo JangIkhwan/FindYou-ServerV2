@@ -6,9 +6,11 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "report_images")
+@SQLRestriction("status = 'Y'")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ReportImage extends BaseEntity {
@@ -46,4 +48,3 @@ public class ReportImage extends BaseEntity {
         }
     }
 }
-
