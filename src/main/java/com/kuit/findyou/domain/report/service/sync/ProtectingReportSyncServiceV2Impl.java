@@ -3,17 +3,13 @@ package com.kuit.findyou.domain.report.service.sync;
 import com.kuit.findyou.domain.report.model.sync.SyncJob;
 import com.kuit.findyou.domain.report.model.sync.SyncJobType;
 import com.kuit.findyou.domain.report.service.sync.job.SyncJobService;
-import com.kuit.findyou.domain.report.service.sync.merge.ProtectingReportMergeService;
 import com.kuit.findyou.domain.report.service.sync.staging.ProtectingAnimalStagingService;
 import com.kuit.findyou.domain.report.service.sync.staging.StagingValidationResult;
-import com.kuit.findyou.global.common.exception.CustomException;
 import com.kuit.findyou.global.external.client.ProtectingAnimalApiClient;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalPageResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import static com.kuit.findyou.global.common.response.status.BaseExceptionResponseStatus.PROTECTING_REPORT_SYNC_FAILED;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -24,7 +20,6 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
     private final ProtectingAnimalApiClient protectingAnimalApiClient;
     private final SyncJobService syncJobService;
     private final ProtectingAnimalStagingService stagingService;
-    private final ProtectingReportMergeService mergeService;
 
     @Override
     public void syncProtectingReports() {
@@ -47,6 +42,7 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
                     if (totalExpectedCount == null) {
                         totalExpectedCount = pageResult.totalCount();
                         syncJobService.updateExpectedCount(job.getId(), totalExpectedCount);
+
                         log.info("공공데이터 동기화 잡 {} : totalExpectedCount = {}", job.getId(), totalExpectedCount);
                     }
 
@@ -57,12 +53,13 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
                     int stagedCount = stagingService.savePage(job.getId(), pageNo, pageResult);
                     syncJobService.recordBatchSuccess(job.getId(), pageNo, pageNo, pageResult.items().size(), stagedCount);
 
-                    log.info("공공데이터 동기화 잡 {} : {} / {} 완료 ", job.getId(), pageNo, (int) Math.ceil((double) totalExpectedCount / PAGE_SIZE));
+                    log.info("공공데이터 동기화 잡 {} : API에서 전체 {} 페이지 중 {} 번째 페이지를 스테이징에 저장 완료 ", job.getId(), (int) Math.ceil((double) totalExpectedCount / PAGE_SIZE), pageNo);
 
                     pageNo++;
                 }
                 catch (Exception e){
                     log.error("공공데이터 동기화 잡 {} : pageNo = {} 에서 에러 발생, 에러 사유 = {}", job.getId(), pageNo, e.getMessage());
+
                     syncJobService.recordBatchFailure(
                             job.getId(),
                             pageNo,
@@ -70,6 +67,7 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
                             pageResult == null ? 0 : pageResult.items().size(),
                             e.getMessage()
                     );
+
                     throw e;
                 }
             }
@@ -85,10 +83,8 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
 
             syncJobService.markMerging(job.getId());
 
-            // TODO : 원자적으로 수행되도록 트랜잭션 설정
-            int mergedCount = mergeService.merge(job.getId());
-            mergeService.deleteStaging(job.getId());
-            syncJobService.markSuccess(job.getId(), mergedCount);
+            // TODO : merge의 실행 시간이 길어진다면 그 전에 leaseUntil을 더 길게 설정해야할 수도 있다
+            stagingService.merge(job.getId());
 
             long endMs = System.currentTimeMillis();
 
@@ -98,8 +94,6 @@ public class ProtectingReportSyncServiceV2Impl implements ProtectingReportSyncSe
             log.error("공공데이터 동기화 잡 {} : 실패 사유 = {}", job.getId(), e.getMessage());
 
             syncJobService.markFailed(job.getId(), e);
-            throw new CustomException(PROTECTING_REPORT_SYNC_FAILED);
         }
     }
-
 }

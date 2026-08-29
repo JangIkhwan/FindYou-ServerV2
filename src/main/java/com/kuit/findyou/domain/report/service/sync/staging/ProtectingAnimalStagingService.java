@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kuit.findyou.domain.report.model.sync.PublicAnimalStagingRow;
 import com.kuit.findyou.domain.report.repository.sync.PublicAnimalStagingJdbcRepository;
+import com.kuit.findyou.domain.report.service.sync.job.SyncJobService;
+import com.kuit.findyou.domain.report.service.sync.merge.ProtectingReportMergeService;
 import com.kuit.findyou.global.external.client.KakaoCoordinateClient;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalItemDTO;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalPageResult;
@@ -24,8 +26,10 @@ public class ProtectingAnimalStagingService {
 
     private static final String DEFAULT_SIGNIFICANT = "미등록";
 
-    private final PublicAnimalStagingJdbcRepository publicAnimalStagingRepository;
+    private final ProtectingReportMergeService mergeService;
+    private final SyncJobService syncJobService;
     private final ProtectingAnimalStagingWriter stagingWriter;
+    private final PublicAnimalStagingJdbcRepository publicAnimalStagingRepository;
     private final KakaoCoordinateClient kakaoCoordinateClient;
     private final ObjectMapper objectMapper;
 
@@ -114,5 +118,12 @@ public class ProtectingAnimalStagingService {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 algorithm is not available", e);
         }
+    }
+
+    @Transactional
+    public void merge(Long syncJobId) {
+        int mergedCount = mergeService.merge(syncJobId);
+        mergeService.deleteStaging(syncJobId);
+        syncJobService.markSuccess(syncJobId, mergedCount);
     }
 }

@@ -5,6 +5,8 @@ import com.kuit.findyou.domain.report.model.sync.PublicAnimalStagingRow;
 import com.kuit.findyou.domain.report.model.sync.SyncJob;
 import com.kuit.findyou.domain.report.model.sync.SyncJobType;
 import com.kuit.findyou.domain.report.repository.sync.PublicAnimalStagingJdbcRepository;
+import com.kuit.findyou.domain.report.service.sync.job.SyncJobService;
+import com.kuit.findyou.domain.report.service.sync.merge.ProtectingReportMergeService;
 import com.kuit.findyou.global.external.client.KakaoCoordinateClient;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalItemDTO;
 import com.kuit.findyou.global.external.dto.ProtectingAnimalPageResult;
@@ -28,6 +30,12 @@ import static org.mockito.Mockito.when;
 class ProtectingAnimalStagingServiceTest {
 
     @Mock
+    ProtectingReportMergeService mergeService;
+
+    @Mock
+    SyncJobService syncJobService;
+
+    @Mock
     PublicAnimalStagingJdbcRepository publicAnimalStagingRepository;
 
     @Mock
@@ -41,8 +49,10 @@ class ProtectingAnimalStagingServiceTest {
     @BeforeEach
     void setUp() {
         protectingAnimalStagingService = new ProtectingAnimalStagingService(
-                publicAnimalStagingRepository,
+                mergeService,
+                syncJobService,
                 protectingAnimalStagingWriter,
+                publicAnimalStagingRepository,
                 kakaoCoordinateClient,
                 new ObjectMapper()
         );
